@@ -2,14 +2,13 @@
 #include <fstream>
 #include <iostream>
 
-#define WIDTH 256
+#define WIDTH 1024
 #define SIZE (WIDTH*WIDTH)
 
 int main(){
     cudaEvent_t start, stop;
     cudaEventCreate(&start);
     cudaEventCreate(&stop);
-    cudaEventRecord(start, 0);
 
     float *a, *b, *out, *dev_a, *dev_b, *dev_out;
     a = (float *) malloc(SIZE * sizeof(float));
@@ -33,7 +32,13 @@ int main(){
     std::cout << gridSize << std::endl;
     dim3 dimGrid(gridSize, gridSize, 1);
 
-    naiveMatMulKernel <<<dimGrid, dimBlock>>> (dev_a, dev_b, dev_out, WIDTH);
+    cudaEventRecord(start, 0);
+
+    //naiveMatMulKernel <<<dimGrid, dimBlock>>> (dev_a, dev_b, dev_out, WIDTH);
+    tilingMatMulKernel <<<dimGrid, dimBlock>>> (dev_a, dev_b, dev_out, WIDTH);
+
+    cudaEventRecord(stop, 0);
+    cudaEventSynchronize(stop);
 
     cudaMemcpy(out, dev_out, SIZE * sizeof(float), cudaMemcpyDeviceToHost);
 
@@ -42,9 +47,6 @@ int main(){
     cudaFree(dev_out);
     free(a);
     free(b);
-
-    cudaEventRecord(stop, 0);
-    cudaEventSynchronize(stop);
 
     float time;
     cudaEventElapsedTime(&time, start, stop);
